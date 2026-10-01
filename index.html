@@ -214,6 +214,7 @@ table.rk{border-collapse:separate;border-spacing:0;width:100%;min-width:1100px;f
 .rk tr.l1 td{background:var(--surface-2);font-weight:700}
 .rk td a{color:var(--sea-ink);font-weight:600;word-break:break-all}
 .rk .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rk th.num{text-align:right}
 
 /* pengaturan */
 .set{padding:18px}
@@ -313,11 +314,35 @@ textarea.in{min-height:84px;resize:vertical}
   .lk .lt{grid-column:1/-1;order:3}
   .live .lab{display:none}
 }
+/* layar pemilihan peran & pemuatan awal */
+.loading{position:fixed;inset:0;z-index:80;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.loading .spin{width:40px;height:40px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--sea);animation:spin 0.8s linear infinite}
+.loading p{color:var(--ink-2);font-size:14.5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gate{position:fixed;inset:0;z-index:70;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+.gate-card{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:34px 30px;max-width:440px;width:100%;text-align:center}
+.gate-card img{height:64px;width:auto;margin-bottom:14px}
+.gate-card h1{font-size:21px;margin-bottom:4px}
+.gate-card .org{color:var(--ink-2);font-size:13.5px;margin-bottom:18px}
+.gate-card .ask{font-size:14.5px;font-weight:600;margin-bottom:14px}
+.gate-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px}
+.gate-btn{border:1px solid var(--line);background:var(--surface-2);color:var(--ink);padding:12px 10px;border-radius:12px;font-weight:600;font-size:13.5px;line-height:1.3}
+.gate-btn:hover{border-color:var(--sea);background:var(--sea-soft)}
+.gate-admin{border:0;background:none;color:var(--ink-2);font-size:13px;text-decoration:underline;font-weight:600}
+.gate-admin:hover{color:var(--ink)}
+.role-tag{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--rail-line);border-radius:10px;font-size:12.5px;color:var(--rail-mute)}
+.role-tag b{color:#fff;font-weight:600}
+.role-tag button{border:0;background:none;color:var(--rail-mute);text-decoration:underline;font-size:12px;flex:none}
+.role-tag button:hover{color:#fff}
+.offline-banner{background:var(--coral-soft);color:var(--coral);padding:10px 14px;border-radius:12px;font-size:13.5px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.offline-banner button{margin-left:auto}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-<div class="app">
+<div class="gate" id="gate" style="display:none"></div>
+<div class="loading" id="loading" style="display:none"><div class="spin" aria-hidden="true"></div><p id="loadingtext">Memuat data dari Google Sheet…</p></div>
+<div class="app" id="appwrap">
   <aside class="rail" id="rail"></aside>
   <main class="main" id="main" tabindex="-1"></main>
 </div>
@@ -356,6 +381,7 @@ const BAND_LABEL = {ok:'Tercapai',good:'Hampir tercapai',warn:'Perlu percepatan'
 const STATUS_LABEL = {belum:'Belum dilaporkan',draft:'Draft',terkirim:'Terkirim',terverifikasi:'Terverifikasi'};
 const DRIVE_RE = /^https:\/\/(drive|docs)\.google\.com\/\S+$/i;
 const DEFAULT_PASS = 'bapperida2026';
+const LOGO_URI = 'data:image/png;base64,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';
 
 const BY = {}; ITEMS.forEach(x=>BY[x.k]=x);
 const CHILD = {}; ITEMS.forEach(x=>{ const p = x.l===3 ? x.kk : (x.l===2 ? x.pk : null); if(p){ (CHILD[p]=CHILD[p]||[]).push(x.k); } });
@@ -410,7 +436,8 @@ const S = {
   per: PERIOD.id, view:'dashboard', bidang:'all', dashBidang:'all', adminTab:'verif',
   q:'', st:'all', collapsed:{},
   reports:{}, cfg:{map:{},names:{},targets:{},pass:''},
-  ready:false, remote: !!APPS_SCRIPT_URL, isAdmin: ls.get('isAdmin','0')==='1',
+  ready:false, remote: !!APPS_SCRIPT_URL, online:null, isAdmin: ls.get('isAdmin','0')==='1',
+  myBidang: ls.get('myBidang',''), pending:{}, cfgPending:false,
   rekapBidang:'all', rekapLevel:'all', tipOff: ls.get('tipOff','0')==='1'
 };
 let F = null;            // form yang sedang dibuka
@@ -467,15 +494,23 @@ async function pullRemote(silent){
     const res = await fetch(APPS_SCRIPT_URL, {method:'GET', cache:'no-store'});
     const j = await res.json();
     if(!j || j.ok===false) throw new Error(j&&j.error||'gagal mengambil data');
-    S.reports = j.reports||{};
-    S.cfg = Object.assign({map:{},names:{},targets:{},pass:''}, j.cfg||{});
-    S.online = true;
+    /* Jangan pernah menimpa data laporan/pengaturan yang sedang dalam proses
+       disimpan (S.pending / S.cfgPending) — mencegah hasil "polling" lama
+       menutupi perubahan yang baru saja dikirim tapi belum sempat terbaca
+       ulang oleh Google Sheet. Ini yang menyebabkan kesan data "hilang". */
+    const merged = Object.assign({}, j.reports||{});
+    Object.keys(S.pending).forEach(k=>{ if(S.reports[k]!==undefined) merged[k]=S.reports[k]; });
+    S.reports = merged;
+    if(!S.cfgPending) S.cfg = Object.assign({map:{},names:{},targets:{},pass:''}, j.cfg||{});
+    S.online = true; S.lastSync = new Date();
   }catch(e){ S.online = false; if(!silent) console.warn('Gagal terhubung ke Apps Script:', e); }
   S.ready = true; refresh();
 }
 async function initStore(){
   if(S.remote){
+    showLoading();
     await pullRemote();
+    hideLoading();
     setInterval(()=>pullRemote(true), REFRESH_MS);
     document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) pullRemote(true); });
   } else {
@@ -484,19 +519,48 @@ async function initStore(){
   }
 }
 async function saveRep(kode, per, r){
-  const cur = S.reports[kode] ? clone(S.reports[kode]) : {kode:kode};
+  const prevExisted = S.reports[kode]!==undefined;
+  const prev = prevExisted ? clone(S.reports[kode]) : null;
+  const cur = prevExisted ? clone(prev) : {kode:kode};
   cur.kode = kode; cur.per = cur.per || {};
   delete cur.tw;
   if(r) cur.per[per]=r; else delete cur.per[per];
-  S.reports[kode]=cur; refresh();
-  if(S.remote){ const res = await apiPost({action:'saveReport', kode, data:cur}); if(!res || res.ok===false) throw new Error(res&&res.error||'gagal menyimpan'); }
-  else ls.set('laporan-local', JSON.stringify(S.reports));
+  S.reports[kode]=cur; S.pending[kode]=true; refresh();
+  if(S.remote){
+    try{
+      const res = await apiPost({action:'saveReport', kode, data:cur});
+      if(!res || res.ok===false) throw new Error(res&&res.error||'gagal menyimpan');
+    }catch(e){
+      /* Gagal tersimpan di Google Sheet: batalkan perubahan di layar supaya
+         tidak ada laporan "hantu" yang tampak terkirim padahal sebenarnya
+         belum tersimpan sama sekali. */
+      if(prevExisted) S.reports[kode]=prev; else delete S.reports[kode];
+      delete S.pending[kode]; refresh();
+      throw e;
+    }
+    delete S.pending[kode];
+  } else {
+    delete S.pending[kode];
+    ls.set('laporan-local', JSON.stringify(S.reports));
+  }
 }
 async function saveCfg(){
+  const prev = clone(S.cfg);
   refresh();
   const payload = {map:S.cfg.map, names:S.cfg.names, targets:S.cfg.targets, pass:S.cfg.pass};
-  if(S.remote){ const res = await apiPost({action:'saveConfig', data:payload}); if(!res || res.ok===false) throw new Error(res&&res.error||'gagal menyimpan'); }
-  else ls.set('cfg-local', JSON.stringify(S.cfg));
+  if(S.remote){
+    S.cfgPending = true;
+    try{
+      const res = await apiPost({action:'saveConfig', data:payload});
+      if(!res || res.ok===false) throw new Error(res&&res.error||'gagal menyimpan');
+    }catch(e){
+      S.cfg = prev; S.cfgPending=false; refresh();
+      throw e;
+    }
+    S.cfgPending = false;
+  } else {
+    ls.set('cfg-local', JSON.stringify(S.cfg));
+  }
 }
 
 /* ---------- unduh berkas (browser biasa, tanpa API Claude) ---------- */
@@ -507,6 +571,27 @@ function downloadText(filename, text){
   setTimeout(()=>URL.revokeObjectURL(url), 4000);
 }
 
+/* ---------- layar muat & pemilihan peran ---------- */
+function showLoading(){ const g=$('#gate'); if(g && g.style.display==='flex') return; const el=$('#loading'); if(el) el.style.display='flex'; }
+function hideLoading(){ const el=$('#loading'); if(el) el.style.display='none'; }
+function offlineBanner(){
+  if(!S.remote || S.online!==false) return '';
+  return `<div class="offline-banner">Tidak dapat terhubung ke Google Sheet. Data yang tampil mungkin tidak terbaru — perubahan baru tidak akan hilang, tapi periksa sambungan internet Anda. <button class="btn sm" data-act="refresh-now">Coba lagi</button></div>`;
+}
+function gateHTML(){
+  const bidBtns = BID_REAL.map(b=>`<button type="button" class="gate-btn" data-act="pick-role" data-v="${b.id}">${esc(bidangName(b.id))}</button>`).join('');
+  return `<div class="gate-card">
+    <img src="${LOGO_URI}" alt="Logo Kabupaten Lamongan">
+    <h1>Portal Pelaporan Kinerja</h1>
+    <div class="org">BAPPERIDA Kabupaten Lamongan · TA 2026</div>
+    <div class="ask">Anda melapor untuk bidang mana?</div>
+    <div class="gate-grid">${bidBtns}</div>
+    <button type="button" class="gate-admin" data-act="pick-role" data-v="admin">Masuk sebagai Admin</button>
+  </div>`;
+}
+function showGate(){ const g=$('#gate'); g.innerHTML=gateHTML(); g.style.display='flex'; $('#appwrap').style.display='none'; }
+function hideGate(){ $('#gate').style.display='none'; $('#appwrap').style.display='grid'; }
+
 /* ---------- toast ---------- */
 function toast(msg){
   const t=$('#toast'); t.textContent=msg; t.classList.add('on');
@@ -515,19 +600,24 @@ function toast(msg){
 
 /* ---------- rail ---------- */
 function pendingCount(){
-  return activeItems().filter(it=>!isSent(rep(it.k,S.per))).length;
+  const scope = isRestricted() ? activeItems().filter(x=>bidangOf(x)===S.myBidang) : activeItems();
+  return scope.filter(it=>!isSent(rep(it.k,S.per))).length;
 }
+function isRestricted(){ return !!S.myBidang && S.myBidang!=='admin'; }
+function roleLabel(){ return S.myBidang==='admin' ? 'Admin' : bidangName(S.myBidang); }
 function renderRail(){
   const nav = [
     ['dashboard','Dashboard',ICON.dash],['lapor','Pelaporan',ICON.edit],['rekap','Rekap laporan',ICON.table],['admin',S.isAdmin?'Admin':'Masuk admin',ICON.gear]
   ].map(([v,l,ic])=>`<button data-act="nav" data-v="${v}" ${S.view===v?'aria-current="page"':''}>${ic}<span class="tx">${l}</span>${v==='lapor'&&S.ready?`<span class="cnt" title="Belum terkirim">${pendingCount()}</span>`:''}</button>`).join('');
   $('#rail').innerHTML = `
     <div class="brand">
-      <img src="data:image/png;base64,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" width="29" height="34" alt="Logo Kabupaten Lamongan">
+      <img src="${LOGO_URI}" width="29" height="34" alt="Logo Kabupaten Lamongan">
       <div><b>Portal Kinerja</b><span>BAPPERIDA Kab. Lamongan · TA 2026</span></div>
     </div>
     <nav class="nav" aria-label="Menu utama">${nav}</nav>
-    <div class="sync ${!S.remote?'local':(S.online?'':'local')}"><i></i><span>${!S.remote?'Mode lokal: data hanya tersimpan di peramban ini (APPS_SCRIPT_URL belum diisi).':(S.online?'Tersambung ke Google Sheet — data tersimpan bersama untuk semua pengguna.':'Tidak dapat terhubung ke Google Sheet. Periksa APPS_SCRIPT_URL dan koneksi internet.')}</span></div>`;
+    <div class="role-tag"><span>Masuk sebagai <b>${esc(roleLabel())}</b></span><button data-act="switch-role">Ganti</button></div>
+    <div class="sync ${!S.remote?'local':(S.online?'':'local')}"><i></i><span>${!S.remote?'Mode lokal: data hanya tersimpan di peramban ini (APPS_SCRIPT_URL belum diisi).':(S.online?'Tersambung ke Google Sheet — data tersimpan bersama untuk semua pengguna.'+(S.lastSync?' Terakhir disegarkan '+S.lastSync.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})+'.':''):'Tidak dapat terhubung ke Google Sheet. Periksa APPS_SCRIPT_URL dan koneksi internet.')}</span></div>
+    ${S.remote?`<button class="btn sm" data-act="refresh-now" style="width:100%">Segarkan sekarang</button>`:''}`;
 }
 
 /* ---------- header periode ---------- */
@@ -546,7 +636,8 @@ function renderDashboard(){
   const bidRows = bidangList().filter(b=>fb==='all'||b.id===fb).map(b=>{
     const list = ITEMS.filter(x=>bidangOf(x)===b.id && x.l===3);
     const bs = stats(list,per); const belum = bs.n-bs.sent-bs.draft;
-    return `<tr><td>${esc(bidangName(b.id))}</td><td class="num">${bs.n}</td><td class="num">${bs.sent}</td><td class="num">${bs.draft}</td><td class="num">${belum}</td><td class="num">${bs.ver}</td><td class="num"><b>${fmtPct(bs.avg)}</b></td></tr>`;
+    const vp = bs.n ? bs.ver/bs.n*100 : 0;
+    return `<tr><td>${esc(bidangName(b.id))}</td><td class="num">${bs.n}</td><td class="num">${bs.sent}</td><td class="num">${bs.draft}</td><td class="num">${belum}</td><td class="num">${bs.ver}</td><td style="min-width:150px"><div class="bar"><i class="${band(vp)}" style="width:${vp}%"></i></div><small style="color:var(--ink-2)">${bs.ver}/${bs.n} terverifikasi</small></td><td class="num"><b>${fmtPct(bs.avg)}</b></td></tr>`;
   }).join('');
   const progRows = ITEMS.filter(x=>x.l===1 && (fb==='all'||bidangOf(x)===fb)).map(p=>{
     const own = rep(p.k,per); const ownP = own? pctOf(p,own):null;
@@ -557,17 +648,19 @@ function renderDashboard(){
   const noteItems = ITEMS.filter(x=>isActive(x) && (fb==='all'||bidangOf(x)===fb)).map(it=>({it,r:rep(it.k,per)})).filter(x=>x.r && x.r.vc);
   const notesRows = noteItems.length ? noteItems.map(({it,r})=>`<tr><td>${esc(it.k)}</td><td style="min-width:220px">${esc(it.n)}</td><td>${esc(bidangName(bidangOf(it)))}</td><td style="min-width:260px">${esc(r.vc)}</td><td><span class="pill ${r.s}">${STATUS_LABEL[r.s]}</span></td></tr>`).join('')
     : `<tr><td colspan="5" style="text-align:center;color:var(--ink-2);padding:22px">Belum ada catatan verifikasi dari admin.</td></tr>`;
-  return renderTop('Dashboard kinerja 2026','Ringkasan pelaporan capaian kinerja BAPPERIDA. '+twSub())+`
+  const totalVp = s.n ? s.ver/s.n*100 : 0;
+  return renderTop('Dashboard kinerja 2026','Ringkasan pelaporan capaian kinerja BAPPERIDA. '+twSub())+
+  offlineBanner()+`
   <div class="card filters" style="position:static"><div class="frow">
     <select id="db" aria-label="Filter bidang"><option value="all">Semua bidang</option>${bidangList().map(b=>`<option value="${b.id}" ${fb===b.id?'selected':''}>${esc(bidangName(b.id))}</option>`).join('')}</select>
   </div></div>
   <section class="sec"><h2>Ringkasan per bidang</h2>
-    <div class="card tw-wrap"><table class="rk"><thead><tr><th>Bidang</th><th>Sub kegiatan</th><th>Terkirim</th><th>Draft</th><th>Belum</th><th>Terverifikasi</th><th>Rata-rata capaian</th></tr></thead>
-    <tbody>${bidRows||'<tr><td colspan="7" style="text-align:center;color:var(--ink-2);padding:22px">Tidak ada data.</td></tr>'}</tbody><tfoot><tr class="l1"><td>Total</td><td class="num">${s.n}</td><td class="num">${s.sent}</td><td class="num">${s.draft}</td><td class="num">${s.n-s.sent-s.draft}</td><td class="num">${s.ver}</td><td class="num">${fmtPct(s.avg)}</td></tr></tfoot></table></div>
+    <div class="card tw-wrap"><table class="rk"><thead><tr><th>Bidang</th><th class="num">Sub kegiatan</th><th class="num">Terkirim</th><th class="num">Draft</th><th class="num">Belum</th><th class="num">Terverifikasi</th><th>Progres verifikasi</th><th class="num">Rata-rata capaian</th></tr></thead>
+    <tbody>${bidRows||'<tr><td colspan="8" style="text-align:center;color:var(--ink-2);padding:22px">Tidak ada data.</td></tr>'}</tbody><tfoot><tr class="l1"><td>Total</td><td class="num">${s.n}</td><td class="num">${s.sent}</td><td class="num">${s.draft}</td><td class="num">${s.n-s.sent-s.draft}</td><td class="num">${s.ver}</td><td><div class="bar"><i class="${band(totalVp)}" style="width:${totalVp}%"></i></div></td><td class="num">${fmtPct(s.avg)}</td></tr></tfoot></table></div>
     ${offCount?`<p class="note" style="margin-top:8px">${offCount} sub kegiatan bertarget 0 tidak ditampilkan (dapat diaktifkan melalui menu Admin → Target &amp; satuan).</p>`:''}
   </section>
   <section class="sec"><h2>Capaian per program</h2>
-    <div class="card tw-wrap"><table class="rk"><thead><tr><th>Kode</th><th>Program</th><th>Bidang</th><th>Indikator program</th><th>Rata-rata sub kegiatan</th><th>Sub kegiatan terkirim</th></tr></thead><tbody>${progRows||'<tr><td colspan="6" style="text-align:center;color:var(--ink-2);padding:22px">Tidak ada data.</td></tr>'}</tbody></table></div>
+    <div class="card tw-wrap"><table class="rk"><thead><tr><th>Kode</th><th>Program</th><th>Bidang</th><th class="num">Indikator program</th><th class="num">Rata-rata sub kegiatan</th><th class="num">Sub kegiatan terkirim</th></tr></thead><tbody>${progRows||'<tr><td colspan="6" style="text-align:center;color:var(--ink-2);padding:22px">Tidak ada data.</td></tr>'}</tbody></table></div>
   </section>
   <section class="sec"><h2>Catatan verifikasi</h2><p class="sub">Catatan yang diberikan admin saat memverifikasi laporan.</p>
     <div class="card tw-wrap"><table class="rk"><thead><tr><th>Kode</th><th>Uraian</th><th>Bidang</th><th>Catatan</th><th>Status</th></tr></thead><tbody>${notesRows}</tbody></table></div>
@@ -619,13 +712,17 @@ function listHTML(){
   }).join('');
 }
 function renderLapor(){
+  const restrict = isRestricted();
+  if(restrict) S.bidang = S.myBidang;
   const counts = {}; ITEMS.forEach(it=>{ if(isActive(it) && !isSent(rep(it.k,S.per))){ const b=bidangOf(it); counts[b]=(counts[b]||0)+1; }});
   const totalPend = Object.values(counts).reduce((a,b)=>a+b,0);
-  const chips = `<button class="chip" data-act="bidang" data-v="all" aria-pressed="${S.bidang==='all'}">Semua bidang<em>${totalPend}</em></button>` +
-    bidangList().map(b=>`<button class="chip" data-act="bidang" data-v="${b.id}" aria-pressed="${S.bidang===b.id}">${esc(bidangName(b.id))}<em>${counts[b.id]||0}</em></button>`).join('');
-  return renderTop('Pelaporan kinerja','Pilih butir, isi realisasi, lampirkan tautan Google Drive, lalu kirim. '+twSub())+`
+  const chipsRow = restrict
+    ? `<p class="sub" style="margin:0">Menampilkan butir untuk bidang <b>${esc(bidangName(S.myBidang))}</b> saja.</p>`
+    : `<div class="chips" role="group" aria-label="Filter bidang"><button class="chip" data-act="bidang" data-v="all" aria-pressed="${S.bidang==='all'}">Semua bidang<em>${totalPend}</em></button>${bidangList().map(b=>`<button class="chip" data-act="bidang" data-v="${b.id}" aria-pressed="${S.bidang===b.id}">${esc(bidangName(b.id))}<em>${counts[b.id]||0}</em></button>`).join('')}</div>`;
+  return renderTop('Pelaporan kinerja','Pilih butir, isi realisasi, lampirkan tautan Google Drive, lalu kirim. '+twSub())+
+  offlineBanner()+`
   ${S.tipOff?'':`<div class="tip"><div><b>Cara cepat melapor:</b> klik satu baris, isi realisasi (capaian terhitung otomatis), tempel tautan bukti dukung dari Google Drive, lalu pilih <b>Kirim laporan</b>. Centang <b>Lanjut ke butir berikutnya</b> agar laci langsung membuka butir yang belum dilaporkan.</div><button data-act="tip-off">Sembunyikan</button></div>`}
-  <div class="card filters"><div class="chips" role="group" aria-label="Filter bidang">${chips}</div>
+  <div class="card filters">${chipsRow}
     <div class="frow"><input type="search" id="q" placeholder="Cari kode, kegiatan, atau indikator" value="${esc(S.q)}" aria-label="Cari">
     <select id="st" aria-label="Filter status"><option value="all">Semua status</option>${['belum','draft','terkirim','terverifikasi'].map(k=>`<option value="${k}" ${S.st===k?'selected':''}>${STATUS_LABEL[k]}</option>`).join('')}</select></div></div>
   <div class="list" id="list">${listHTML()}</div>`;
@@ -649,7 +746,7 @@ function renderRekap(){
     <select id="rb" aria-label="Filter bidang"><option value="all">Semua bidang</option>${bidangList().map(b=>`<option value="${b.id}" ${S.rekapBidang===b.id?'selected':''}>${esc(bidangName(b.id))}</option>`).join('')}</select>
     <select id="rl" aria-label="Filter tingkat"><option value="all">Semua tingkat</option>${[1,2,3].map(l=>`<option value="${l}" ${S.rekapLevel===String(l)?'selected':''}>${LEVEL[l]}</option>`).join('')}</select>
     <button class="btn" data-act="export" style="margin-left:auto">Unduh CSV</button></div></div>
-  <div class="card tw-wrap" style="margin-top:14px"><table class="rk"><thead><tr><th>Kode</th><th>Program / kegiatan / sub kegiatan</th><th>Bidang</th><th>Indikator</th><th>Target</th><th>Realisasi</th><th>Capaian</th><th>Status</th><th>Bukti dukung</th><th>Pelapor</th><th>Catatan verifikasi</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  <div class="card tw-wrap" style="margin-top:14px"><table class="rk"><thead><tr><th>Kode</th><th>Program / kegiatan / sub kegiatan</th><th>Bidang</th><th>Indikator</th><th class="num">Target</th><th class="num">Realisasi</th><th class="num">Capaian</th><th>Status</th><th>Bukti dukung</th><th>Pelapor</th><th>Catatan verifikasi</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function exportCSV(){
   const q = v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"';
@@ -713,7 +810,7 @@ function renderAdmin(){
   const tabs = `<div class="tabs" role="tablist" aria-label="Bagian admin">${TABS.map(([v,l])=>`<button type="button" class="tab" role="tab" data-act="admintab" data-v="${v}" aria-pressed="${S.adminTab===v}" aria-selected="${S.adminTab===v}">${l}</button>`).join('')}</div>`;
   const sections = {
     verif: `<p class="sub">Catatan yang disimpan di sini akan tampil pada Dashboard dan Rekap laporan.</p>
-      <div class="card tw-wrap"><table class="rk"><thead><tr><th>Sub kegiatan</th><th>Realisasi</th><th>Bukti dukung</th><th>Uraian / kendala</th><th>Catatan verifikasi</th><th>Status</th></tr></thead><tbody>${verRows}</tbody></table></div>`,
+      <div class="card tw-wrap"><table class="rk"><thead><tr><th>Sub kegiatan</th><th class="num">Realisasi</th><th>Bukti dukung</th><th>Uraian / kendala</th><th>Catatan verifikasi</th><th>Status</th></tr></thead><tbody>${verRows}</tbody></table></div>`,
     target: `<p class="sub">Nilai awal berasal dari Renja Perubahan 2026. Ubah lalu simpan otomatis saat keluar dari kolom, atau gunakan tombol kembalikan.</p>
       <div class="card set tw-wrap"><table>${trows?`<thead><tr><th>Uraian</th><th>Indikator</th><th>Target</th><th>Satuan</th><th></th></tr></thead><tbody>${trows}</tbody>`:''}</table></div>`,
     map: `<p class="sub">Sub kegiatan mengikuti bidang kegiatan induknya. Pemetaan awal mengikuti sheet 1 (portal) pada Renja Perubahan.</p>
@@ -948,6 +1045,17 @@ document.addEventListener('click', e=>{
   }
   else if(a==='admintab'){ S.adminTab=t.dataset.v; refresh(); }
   else if(a==='logout'){ S.isAdmin=false; ls.set('isAdmin','0'); S.view='dashboard'; refresh(); }
+  else if(a==='pick-role'){
+    const v=t.dataset.v; S.myBidang=v; ls.set('myBidang',v);
+    if(v!=='admin') S.bidang=v;
+    hideGate(); S.view = v==='admin' ? 'admin' : 'dashboard';
+    if(S.remote && !S.ready) showLoading(); else { renderRail(); renderMain(); }
+  }
+  else if(a==='switch-role'){
+    S.myBidang=''; ls.set('myBidang',''); S.isAdmin=false; ls.set('isAdmin','0'); S.view='dashboard';
+    showGate();
+  }
+  else if(a==='refresh-now'){ pullRemote(false); toast('Menyegarkan data…'); }
   else if(a==='save-note'){ saveNote(t.dataset.k); }
   else if(a==='ver-toggle'){ toggleVerify(t.dataset.k, t.dataset.v==='1'); }
   else if(a==='save-pass'){
@@ -1008,7 +1116,7 @@ document.addEventListener('mouseover', e=>{ const t=e.target.closest('[data-tip]
 document.addEventListener('focusin', e=>{ const t=e.target.closest && e.target.closest('[data-tip]'); const ro=$('#readout'); if(t&&ro) ro.innerHTML=tipFor(t.dataset.k); });
 
 /* ---------- mulai ---------- */
-renderRail(); renderMain();
+if(!S.myBidang){ showGate(); } else { hideGate(); renderRail(); renderMain(); }
 initStore();
 })();
 
